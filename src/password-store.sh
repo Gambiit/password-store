@@ -228,14 +228,14 @@ cmd_usage() {
 	    $PROGRAM find pass-names...
 	    	List passwords that match pass-names.
 	    $PROGRAM [show] [--clip,-c] pass-name
-	        Show existing password and optionally put it on the clipboard.
+	        Show existing password and eventually generate totp code. Optionally put it on the clipboard.
 	        If put on the clipboard, it will be cleared in $CLIP_TIME seconds.
 	    $PROGRAM grep search-string
 	        Search for password files containing search-string when decrypted.
-	    $PROGRAM insert [--echo,-e | --multiline,-m] [--force,-f] pass-name
+	    $PROGRAM insert [--echo,-e | --multiline,-m] [--force,-f] [--totp,-t] pass-name
 	        Insert new password. Optionally, echo the password back to the console
 	        during entry. Or, optionally, the entry may be multiline. Prompt before
-	        overwriting existing password unless forced.
+	        overwriting existing password unless forced. Or, optionally, insert base32 key to generate totp code.
 	    $PROGRAM edit pass-name
 	        Insert a new password or edit an existing password using ${EDITOR:-vi}.
 	    $PROGRAM generate [--no-symbols,-n] [--clip,-c] [--in-place,-i | --force,-f] pass-name pass-length
