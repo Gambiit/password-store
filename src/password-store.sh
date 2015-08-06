@@ -323,7 +323,7 @@ cmd_show() {
 			clip "$pass" "$path"
 		fi
 		if [[ -f $passtotpfile ]]; then
-			$OTP "${OTP_OPTS[@]}" `$GPG -d "${GPG_OPTS[@]}" "$passtotpfile"`
+			$OTP "${OTP_OPTS[@]}" $($GPG -d "${GPG_OPTS[@]}" "$passtotpfile")
 		fi
 	elif [[ -d $PREFIX/$path ]]; then
 		if [[ -z $path ]]; then
