@@ -9,9 +9,6 @@ set -o pipefail
 GPG_OPTS=( $PASSWORD_STORE_GPG_OPTS "--quiet" "--yes" "--compress-algo=none" "--no-encrypt-to" )
 GPG="gpg"
 
-OTP_OPTS=( $PASSWORD_STORE_OTP_OPTS "--base32" "-w 3" "--totp" )
-OTP="oathtool"
-
 export GPG_TTY="${GPG_TTY:-$(tty 2>/dev/null)}"
 which gpg2 &>/dev/null && GPG="gpg2"
 [[ -n $GPG_AGENT_INFO || $GPG == "gpg2" ]] && GPG_OPTS+=( "--batch" "--use-agent" )
@@ -235,10 +232,10 @@ cmd_usage() {
 	        If put on the clipboard, it will be cleared in $CLIP_TIME seconds.
 	    $PROGRAM grep search-string
 	        Search for password files containing search-string when decrypted.
-	    $PROGRAM insert [--echo,-e | --multiline,-m] [--force,-f] [--totp,-t] pass-name
+	    $PROGRAM insert [--echo,-e | --multiline,-m] [--force,-f] pass-name
 	        Insert new password. Optionally, echo the password back to the console
 	        during entry. Or, optionally, the entry may be multiline. Prompt before
-	        overwriting existing password unless forced. Or, optionally, insert base32 key to generate totp code.
+	        overwriting existing password unless forced.
 	    $PROGRAM edit pass-name
 	        Insert a new password or edit an existing password using ${EDITOR:-vi}.
 	    $PROGRAM generate [--no-symbols,-n] [--clip,-c] [--in-place,-i | --force,-f] pass-name pass-length
@@ -314,7 +311,6 @@ cmd_show() {
 
 	local path="$1"
 	local passfile="$PREFIX/$path.gpg"
-	local passtotpfile="$PREFIX/$path.totp.gpg"
 	check_sneaky_paths "$path"
 	
 	if [[ -f $passfile ]]; then
@@ -324,9 +320,6 @@ cmd_show() {
 			local pass="$($GPG -d "${GPG_OPTS[@]}" "$passfile" | head -n 1)"
 			[[ -n $pass ]] || exit 1
 			clip "$pass" "$path"
-		fi
-		if [[ -f $passtotpfile ]]; then
-			$OTP "${OTP_OPTS[@]}" $($GPG -d "${GPG_OPTS[@]}" "$passtotpfile")
 		fi
 	elif [[ -d $PREFIX/$path ]]; then
 		if [[ -z $path ]]; then
@@ -366,25 +359,21 @@ cmd_grep() {
 }
 
 cmd_insert() {
-	local opts multiline=0 noecho=1 force=0 totp=0
-	opts="$($GETOPT -o meft -l multiline,echo,force,totp -n "$PROGRAM" -- "$@")"
+	local opts multiline=0 noecho=1 force=0
+	opts="$($GETOPT -o mef -l multiline,echo,force -n "$PROGRAM" -- "$@")"
 	local err=$?
 	eval set -- "$opts"
 	while true; do case $1 in
 		-m|--multiline) multiline=1; shift ;;
 		-e|--echo) noecho=0; shift ;;
 		-f|--force) force=1; shift ;;
-		-t|--totp) totp=1; shift ;;
 		--) shift; break ;;
 	esac done
 
 	[[ $err -ne 0 || ( $multiline -eq 1 && $noecho -eq 0 ) || $# -ne 1 ]] && die "Usage: $PROGRAM $COMMAND [--echo,-e | --multiline,-m] [--force,-f] pass-name"
 	local path="$1"
-	if [[ $totp -eq 1 ]]; then
-		local passfile="$PREFIX/$path.totp.gpg"
-	else
-		local passfile="$PREFIX/$path.gpg"
-	fi
+	local passfile="$PREFIX/$path.gpg"
+
 	check_sneaky_paths "$path"
 
 	[[ $force -eq 0 && -e $passfile ]] && yesno "An entry already exists for $path. Overwrite it?"

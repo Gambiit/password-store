@@ -8,10 +8,10 @@ RUN apt-get update && \
 	apt-get install -y 	pass \
 						oathtool
 	
-ADD ./password-store /opt/password-store
+ADD ./src /opt/src
 
-RUN cp /opt/password-store/src/password-store.sh /usr/bin/pass
-RUN cp /opt/password-store/src/completion/pass.bash-completion /etc/bash_completion.d/password-store
+RUN cp /opt/src/password-store.sh /usr/bin/pass
+RUN cp /opt/src/completion/pass.bash-completion /etc/bash_completion.d/password-store
 
 
 CMD ["bash"]
