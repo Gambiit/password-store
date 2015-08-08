@@ -20,6 +20,9 @@ PREFIX="${PASSWORD_STORE_DIR:-$HOME/.password-store}"
 X_SELECTION="${PASSWORD_STORE_X_SELECTION:-clipboard}"
 CLIP_TIME="${PASSWORD_STORE_CLIP_TIME:-45}"
 
+COMMAND_HOOK_REQUIRED_KEY_TRUST="TRUST_ULTIMATE"
+#or "TRUST_FULLY TRUST_ULTIMATE"
+
 export GIT_DIR="${PASSWORD_STORE_GIT:-$PREFIX}/.git"
 export GIT_WORK_TREE="${PASSWORD_STORE_GIT:-$PREFIX}"
 
@@ -323,7 +326,7 @@ cmd_show() {
 			clip "$pass" "$path"
 		fi
 		if [[ -f $passtotpfile ]]; then
-			$OTP "${OTP_OPTS[@]}" `$GPG -d "${GPG_OPTS[@]}" "$passtotpfile"`
+			$OTP "${OTP_OPTS[@]}" $($GPG -d "${GPG_OPTS[@]}" "$passtotpfile")
 		fi
 	elif [[ -d $PREFIX/$path ]]; then
 		if [[ -z $path ]]; then
@@ -583,6 +586,24 @@ cmd_git() {
 	fi
 }
 
+cmd_subcommand_hook(){
+	HOOK="$PREFIX/.subcommand_hooks/$1"
+	[[ -f "$HOOK" ]] || return 1
+	check_sneaky_paths "$1"
+	[[ -x "$HOOK" ]] || die "Hook $1 exists but is not executable"
+	[[ -f "$HOOK.sig" ]] || die "Hook $1 exists but is not signed. Please check if the hook really does what you want it to do and then sign it by using 'gpg --output \"$HOOK.sig\" --detach-sig \"$HOOK\"'"
+	gpg_status=$($GPG --status-fd 1 --verify "$HOOK.sig" "$HOOK" 2>/dev/null | sed -n 's/^\[GNUPG:\] //p' ) 
+	[[ $? -eq 0 ]] || die "Signature verification for hook $1 failed. Please check the hook and if it is okay, re-sign it."
+	for acceptable_trustlevel in $COMMAND_HOOK_REQUIRED_KEY_TRUST; do
+		if echo "$gpg_status" | grep -q "$acceptable_trustlevel"; then
+			shift
+			"$HOOK" "$@"
+			exit $?
+		fi
+	done
+        die "Signature did not match required trust level(s):  ${COMMAND_HOOK_REQUIRED_KEY_TRUST}. Exiting."
+}
+
 #
 # END subcommand functions
 #
@@ -604,6 +625,6 @@ case "$1" in
 	rename|mv) shift;		cmd_copy_move "move" "$@" ;;
 	copy|cp) shift;			cmd_copy_move "copy" "$@" ;;
 	git) shift;			cmd_git "$@" ;;
-	*) COMMAND="show";		cmd_show "$@" ;;
+	*)				cmd_subcommand_hook "$@" || { COMMAND="show"; cmd_show "$@"; } ;; 
 esac
 exit 0
