@@ -31,31 +31,37 @@ Depends on:
 
 # my contrib
 This contribution allows password-store to store a Base32 key used for a two-factor authentication.
-##How to use
-pw file contains the encrypted password. To insert the base32 key to the second authentication factor :
+This branch propose to use external sub-commands hooks. The aim is to keep the "pass" script as simple as possible to ensure safety and reliability...but to allow the end-user to add features. The original idea comes from Lenz Weber who suggested I used it here.
+##End-users addons
+The addons script "otp" is add in the .subcommand_hooks dir. The file must be sign with the same key that the password-store :
 ```
-$pass insert pw -t
-Enter password for pw:
-Retype password for pw:
+$gpg --output otp.sig --detach-sign otp
 ```
-or
+So, the directory look like this
 ```
-$pass insert pw --totp
-Enter password for pw:
-Retype password for pw:
+.password-store
+|_.subcommand_hooks
+| |_otp
+| |_otp.sig
+| |_...
+|
+|_pw.gpg
+|_pw.totp.gpg
+|_...
 ```
-or
+##How to use otp addons
+pw file contains the encrypted password. pw.totp file contains base32 encrypted key, do:
 ```
 $pass insert pw.totp
 Enter password for pw:
 Retype password for pw:
 ```
-To display the two-factor authentication do
+To display the two-factor authentication, do
 ```
-$pass pw
-LeMotDePasse		#first facteur authentication
-999000			#first time otp to second factor authentication
-906475			#second time otp
+$pass otp pw
+MonMotDePasse	#first facteur authentication
+999000			#first time otp, second factor authentication
+906475			#second time otp,
 474288			#...
 256916
 ```
@@ -64,18 +70,3 @@ LeMotDePasse		#first facteur authentication
   http://www.nongnu.org/oath-toolkit/
 
 The defaut code use is `oathtool --base32 -w 3 --totp "base32 key"`
-
-## Test
-You could test this fork in a docker container.
-Because it's impossible to create a gpg key in a container, due to less entropy, copy your .gnupg/ directory inside and append a key DSA without passphrase.
-See https://www.gnupg.org/faq/gnupg-faq.html#automated_use to create a key without passphrase.
-Remember the key-ID.
-Build the image
-```
-$docker build -t password:0.0.1 .
-```
-Create a container test and init the password-store
-```
-$docker run -ti password:0.0.1 bash
-root@abfb58571026:~# pass init key-ID
-```
