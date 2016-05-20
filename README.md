@@ -39,8 +39,9 @@ $gpg --output otp.sig --detach-sign otp
 ```
 So, the directory look like this
 ```
-.password-store
-|_.subcommand_hooks
+.password-store/
+|_.gpg-id
+|_.subcommand_hooks/
 | |_otp
 | |_otp.sig
 | |_...
